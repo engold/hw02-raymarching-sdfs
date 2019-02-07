@@ -1,6 +1,7 @@
 import {vec2, vec3, vec4, mat4} from 'gl-matrix';
 import Drawable from './Drawable';
 import {gl} from '../../globals';
+import { userInfo } from 'os';
 
 var activeProgram: WebGLProgram = null;
 
@@ -29,6 +30,10 @@ class ShaderProgram {
   unifUp: WebGLUniformLocation;
   unifDimensions: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
+  unifAnim: WebGLUniformLocation; // added for hw2
+  unifAstroOffset: WebGLUniformLocation; // added for hw2
+  unifUFORotate: WebGLUniformLocation; // addd for hw2
+  unifAnimColor: WebGLUniformLocation; // added for hw2
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -47,6 +52,10 @@ class ShaderProgram {
     this.unifUp   = gl.getUniformLocation(this.prog, "u_Up");
     this.unifDimensions   = gl.getUniformLocation(this.prog, "u_Dimensions");
     this.unifTime   = gl.getUniformLocation(this.prog, "u_Time");
+    this.unifAnim   = gl.getUniformLocation(this.prog, "u_Animate"); // added for hw2
+    this.unifAstroOffset   = gl.getUniformLocation(this.prog, "u_AstroOffset"); // added for hw2
+    this.unifUFORotate   = gl.getUniformLocation(this.prog, "u_UFORotate"); // added for hw2
+    this.unifAnimColor   = gl.getUniformLocation(this.prog, "u_AnimateColor"); // added for hw2
   }
 
   use() {
@@ -55,6 +64,35 @@ class ShaderProgram {
       activeProgram = this.prog;
     }
   }
+
+  // added this for hw2
+setuAnimate(t: number){
+  this.use();
+  if(this.unifAnim !== -1){
+      gl.uniform1f(this.unifAnim, t);
+  }
+}
+  // added this for hw2
+  setuAnimateColor(t: number){
+    this.use();
+    if(this.unifAnimColor !== -1){
+        gl.uniform1f(this.unifAnimColor, t);
+    }
+  }
+// added for hw2
+setAstroOffset(t: number, a: number, b: number) {
+  this.use();
+  if(this.unifAstroOffset !== -1) {
+    gl.uniform3f(this.unifAstroOffset, t, a, b);
+  }
+}
+ // added this for hw2
+ setUFORotate(t: number){
+  this.use();
+  if(this.unifUFORotate !== -1){
+      gl.uniform1f(this.unifUFORotate, t);
+  }
+}
 
   setEyeRefUp(eye: vec3, ref: vec3, up: vec3) {
     this.use();
