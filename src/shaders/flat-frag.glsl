@@ -18,10 +18,106 @@ const float MIN_DIST = 0.0;
 const float MAX_DIST = 100.0;
 const float EPSILON = 0.0001;
 
-struct intersection{
- float t;
- float colorID;
+// ----------bounding box stuff --------------------
+// struct for bounding box
+struct BoundingBox{
+ vec3 minVals;
+ vec3 maxVals;
 };
+
+BoundingBox listofBB[2];
+
+// from Adam's 560 raycasting slides
+float bbRayInterectionTest(BoundingBox box, vec3 rayStart, vec3 dir){
+    float tNear = -999999.0;
+    float tFar = 9999999.0;
+
+   // for each pair of planes associated with the xyz axes
+for(int i = 0; i < 3; i ++)
+{
+
+ // check for parallel rays if direction/slope is 0
+    if(dir[i] == 0.0){
+        if(rayStart[i] < box.minVals[i] || rayStart[i] > box.maxVals[i] ){
+            return tFar; // parallel wont ever intersect
+        }
+
+    }
+
+    // set up t vals
+    float t0 = (box.minVals[i] - rayStart[i]) / dir[i];
+    float t1 = (box.maxVals[i] - rayStart[i]) / dir[i];
+
+    if(t0 > t1){
+        float temp = t0;
+        t0 = t1;
+        t1 = temp;
+    }
+
+    if(t0 > tNear){
+        tNear = t0;
+    }
+    if(t1 < tFar){
+        tFar = t1;
+    }
+
+
+}
+
+// if you dont intersect
+if(tNear > tFar){
+    return tFar;
+}
+
+//if you do intersect
+return tNear;
+
+}
+
+
+float bvhFunc(vec3 p, vec3 dir, BoundingBox listofBB[2]){
+
+    float t = 99999.0;
+  
+
+    for(int i = 0; i < listofBB.length(); i ++){
+        float hit = bbRayInterectionTest(listofBB[i], p, dir);
+
+        if(t > hit){
+            t = hit;
+        }
+    }
+
+    return t;
+
+}
+
+// create boundingboxes for each shape configuration
+BoundingBox makeBBAstro(){
+    BoundingBox box;
+    box.minVals = vec3(-5.0);//vec3(-1.15, 13.25, -1.75);
+    box.maxVals = vec3(5.0);//vec3(1.15, 16.55, 0.0);
+
+    return box;
+}
+
+BoundingBox makeBBUFO(){
+    BoundingBox box;
+    box.minVals = vec3(0.0, -0.8, 0.0);
+    box.maxVals =  vec3(4.0, 1.0, 4.0);
+
+    return box;
+}
+
+
+void intializeBBs(){
+    // one for each cluster of shapes
+    listofBB[0] = makeBBAstro();
+    listofBB[1] = makeBBUFO();
+}
+
+// ------------------------------------------------------
+
 
 // SDF logic from https://www.shadertoy.com/view/llt3R4 and IQ's blog
 
@@ -100,37 +196,6 @@ float sphereSDF(vec3 point, float r){
   return length(point) - r;
 }
 
-// Torus
-float torusSDF( vec3 p, vec2 t )
-{
-  vec2 q = vec2(length(p.xz)-t.x,p.y);
-  return length(q)-t.y;
-}
-// Round Box
-float roundBoxSDF(vec3 p, vec3 b, float r){
-  vec3 d = abs(p) - b;
-  return length(max(d,0.0)) - r + min(max(d.x,max(d.y,d.z)),0.0);
-}
-
-// Cylinder
-float cylinderSDF(vec3 p, vec3 c){
-  return length(p.xz - c.xy) - c.z;
-}
-
-// Capped Cylinder
-float cappedCylinderSDF(vec3 p, vec2 h)
-{
-  vec2 d = abs(vec2(length(p.xz),p.y)) - h;
-  return min(max(d.x,d.y),0.0) + length(max(d,0.0));
-}
-
-// Capsule
-float capsuleSDF( vec3 p, vec3 a, vec3 b, float r )
-{
-    vec3 pa = p - a, ba = b - a;
-    float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
-    return length( pa - ba*h ) - r;
-}
 
 // Ellipsoid
 float ellipsoidSDF(in vec3 p, in vec3 r)
@@ -140,12 +205,6 @@ float ellipsoidSDF(in vec3 p, in vec3 r)
   return k0 * (k0 - 1.0) / k1;
 }
 
-
-//Plane 
-float planeSDF(vec3 p, vec4 n)
-{  
-  return dot(p,n.xyz) + n.w; // n needs to be normalized
-}
 
 //rotation
 vec2 rotateFunc(vec2 v, float y){
@@ -220,13 +279,10 @@ vec3 sceneSDF(vec3 point) {
     a = subtractionOp(sub, a);
     a = subtractionOp(sub2, a);
     a = subtractionOp(sub3, a);
-   // a = unionOp(sub3, a); // to see shape before I remove it
-    //point.y = point.y + x;
     point.y = point.y + x0;
     point.x = point.x + x01;
     float i = ellipsoidSDF(point - vec3(-8.0, 5.0, 1.0), vec3(2.0,0.75,1.8));
     float b = sphereSDF(point - vec3(-8.0, 5.0, 0.0), 1.0);
-    //b = unionOp(i, b);
     b = intersectionOp(i, b);
     float asteroids = min(a,b);
 
@@ -272,26 +328,22 @@ vec3 rayMarch(vec3 pos, vec3 marchingDirection, float start, float end) {
 
     for (int i = 0; i < MAX_RAY_STEPS; i++) {
       temp = sceneSDF(pos + depth * marchingDirection);
-        //dist = sceneSDF(pos + depth * marchingDirection).x;
+      //dist = bvhFunc(u_Eye, marchingDirection, listofBB);
         dist = temp.x;
         col = temp.y;    
 
         if (dist < EPSILON) {
-			      //return depth;
             return vec3(depth, col, 0.0);
         }
         depth += dist;
         if (depth >= end) {
-            //return end;
             return vec3(end, col, 0.0);
         }
     }
-    //return end;
     return vec3(end, col, 0.0);
 }
 
 // ------FBM--------------------------------------------
-// http://patriciogonzalezvivo.com
 
 float random (in vec2 st) {
     return fract(sin(dot(st.xy,
@@ -299,8 +351,8 @@ float random (in vec2 st) {
         43758.5453123);
 }
 
-// Based on Morgan McGuire @morgan3d
-// https://www.shadertoy.com/view/4dS3Wd
+
+//https://thebookofshaders.com/13/
 float noise (in vec2 st) {
     vec2 i = floor(st);
     vec2 f = fract(st);
@@ -324,8 +376,8 @@ float fbm (in vec2 st) {
     float total = 0.0;
     float persist = 0.5;
     int octaves = 6;
-    //
-    // Loop of octaves
+    
+    // Loop for octaves
     for (int i = 0; i < octaves; i++) {
           float frequency = pow(3.0, float(i));
           float amp = pow(persist, float(i));
@@ -404,6 +456,10 @@ vec3 dir = normalize(p - u_Eye);
 
 vec3 marchInfo = vec3(0.0);
 
+// set up boundingboxes
+intializeBBs();
+
+
 // to draw shapes------------------------------------------------
 // .x is the float from raymarching, .y is the color ID
 marchInfo = rayMarch(u_Eye, dir, MIN_DIST, MAX_DIST);
@@ -427,7 +483,6 @@ marchInfo = rayMarch(u_Eye, dir, MIN_DIST, MAX_DIST);
             color *= gain(-1.0, 0.2); // for contrast, make brights brighter
             out_Col = vec4(color,1.0);
         
-        //out_Col = vec4(mix(col, col2, move),1.0);
         
 		return;
     }
@@ -436,6 +491,7 @@ marchInfo = rayMarch(u_Eye, dir, MIN_DIST, MAX_DIST);
 // Lighting
 vec3 n = calcNormal(u_Eye + marchInfo.x * dir);
 vec3 lightVector = vec3(0.0 , 1.0, 0.0);//normalize(u_Eye - p);
+
 // h is the average of the view and light vectors
 vec3 h = (u_Eye + lightVector) / 2.0;
 // specular intensity
@@ -447,13 +503,8 @@ diffuseTerm = clamp(diffuseTerm, 0.0, 1.0);
 float ambientTerm = 0.2;
 float lightIntensity = diffuseTerm + ambientTerm;
 
-  //vec3 colorVec = vec3(1.0, 0.0, 0.0);
- //out_Col = vec4( getColors(colorTerm) * lightIntensity + specularInt, 1.0);
-  //out_Col = vec4(0.5* (n + vec3(1.0)), 1.0); // normals for debugging
-  //out_Col = vec4( getColors(colorTerm) *lightIntensity + specularInt , 1.0);
-  out_Col = vec4( getColors(colorTerm, lightIntensity, specularInt,u_Eye + marchInfo.x * dir) , 1.0);
-  
 
-  //out_Col = vec4(0.5 * (dir + vec3(1.0, 1.0, 1.0)),1);
-  //out_Col = vec4(0.5 * (fs_Pos + vec2(1.0)), 0.5 * (sin(u_Time * 3.14159 * 0.01) + 1.0), 1.0);
+  //out_Col = vec4(0.5* (n + vec3(1.0)), 1.0); // normals for debugging
+  out_Col = vec4( getColors(colorTerm, lightIntensity, specularInt,u_Eye + marchInfo.x * dir) , 1.0);
+ 
 }
