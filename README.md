@@ -18,8 +18,8 @@ pennKey: engold
 
 - Link: https://engold.github.io/hw02-raymarching-sdfs 
 
-![](space1.png)
-![](shading.png)
+![](space1.PNG)
+![](shading.PNG)
 ## SDF Raymarched Scene
 - I used SDFs to make all of the geometry in the scene, which includes an astronaut, a UFO, and 2 irregularly shaped asteroids.
 - I used smoothblend to make the astronaut's suit look continuous. I also used smoothblend for the UFO to make it appear as a single object. The lights are not smoothblended in, but that was an aesthetic choice.
@@ -33,21 +33,21 @@ pennKey: engold
 - I used the sawtoothWave function for the jagged, repeated animation of the back asteroid's up and down movement.
 - I also used the squareWave function on the back asteroid for the instant movement back and forth for the asteroid's side to side movement.
 - Additionally, I used the gain, bias, and smoothstep functions for tweaking the final colors, which was a result of using the mix function for linearly interpolating between two predefined colors based on a function of time. 
-![](spacepos.png)
-![](spacepos2.png)
-![](spacerotate.png)
+![](spacepos.PNG)
+![](spacepos2.PNG)
+![](spacerotate.PNG)
 
 ## Procedural Texturing using toolbox functions and/or noise functions
 - I used an FBM and a noise function to get the coloring for the background of my scene. In order to make it look like space, be nebulous, and appear to have depth, I modified the frequency in my implementation to make the final output
 look smoother and cloudy-er.  
 - I also used the gain and bias functions to increase the contrast of my space background color and make the brighter colors brighter and the darker colors darker.
 
-![](space1.png)
+![](space1.PNG)
 
 ## Shading that involves surface normal computation
 - I used the normals to do Lambertian Shading and Blinn Phong shading. Every material has a base lambert color and materials that should be shiny, like the astronaut's mask and boots and the UFO, have a specular highlight on them from Blinn Phong Shading.
 
-![](shading.png)
+![](shading.PNG)
 
 ## GUI Elements
 - The user can modify the X, Y, and Z position of the astronaut.
